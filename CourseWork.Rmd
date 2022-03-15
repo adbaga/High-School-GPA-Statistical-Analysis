@@ -1,0 +1,185 @@
+---
+title: "Coursework - Intro to Comp Stat"
+# output:
+#   pdf_document: default
+output: html_notebook
+---
+
+
+<h4>About the data set </h4>
+<p>The data in FirstYearGPA contains information from a sample of 219 first year students at a mid-
+western college </p>
+
+```{r}
+library(Stat2Data) #data Set
+data("FirstYearGPA")
+```
+
+<h3>Descriptive statistics of the dataset</h3>
+
+```{r}
+library(psych)
+describe(data("FirstYearGPA"))
+```
+
+
+<ul>
+
+<li>Student's First Year GPA </li>
+```{r}
+fygpa <- FirstYearGPA['GPA']$GPA
+gpadesc.sd <- sd(fygpa)
+gpadesc.mean <- mean(fygpa)
+gpadesc.var <- var(fygpa)
+gpadesc.med <- median(fygpa)
+plot(density(fygpa), main="Distribution of Student's First Year GPA")
+
+
+gpadesc.mean #mean
+gpadesc.med #median
+gpadesc.var #variance
+gpadesc.sd #standard deviation
+
+```
+
+
+<li>Student's FHigh School GPA </li>
+
+```{r}
+hsgpa <- FirstYearGPA['HSGPA']$HSGPA
+hsgpadesc.sd <- sd(hsgpa)
+hsgpadesc.mean <- mean(hsgpa)
+hsgpadesc.var <- var(hsgpa)
+hsgpadesc.med <- median(hsgpa)
+plot(density(hsgpa), main="Distribution of Student's High School GPA")
+
+hsgpadesc.mean #mean
+hsgpadesc.med #median
+hsgpadesc.var #variance
+hsgpadesc.sd #standard deviation
+
+```
+
+</ul>
+
+<h3>Permutation Test</h3>
+<p> Our objective is to know wether the mean first year GPA  are statistically different than the high school GPA. Thus we define that <b>H0: Mu First Year GPA == Mu High School GPA </b> and <b>H0: Mu First Year GPA != Mu High School GPA  </b> 
+
+
+
+
+
+<h3>Permutation Test</h3>
+<p> Our objective is to know wether the mean first year GPA of male students and female students are statistically different. Thus we define that <b>H0: Mu MaleStudentGPA == Mu Female Student GPA </b> and <b>H1: Mu MaleStudentGPA != Mu Female Student GPA </b> 
+
+<ol>
+
+<li>Split the data into male and female students </li>
+
+```{r}
+gend <- c(FirstYearGPA['Male']$Male)
+maleInd <- which(gend==1)
+femInd <- which(gend==0)
+
+#mean for both genders
+male.fygpamean <- mean(fygpa[maleInd])
+female.fygpamean <- mean(fygpa[femInd]) 
+
+male.fygpamean
+female.fygpamean
+```
+<li>Get the difference of both means </li>
+
+```{r}
+diffMeanGend <- male.fygpamean - female.fygpamean
+diffMeanGend
+```
+<li>Test with 10000 permutations </li>
+
+```{r}
+n=10000
+m <- matrix(nr=length(fygpa), nc=n)
+for (i in 1:n){m[,i]<-sample(fygpa, length(fygpa))}
+
+gr1<-as.data.frame(m[1:109,])
+gr2<-as.data.frame(m[110:219,])
+v1<-sapply(gr1, mean)
+v2<-sapply(gr2, mean)
+
+```
+<p>The distribution of the means of the differences of the groups. The lines show the difference of the sample group means. </p>
+
+```{r}
+
+plot(density(v1-v2))
+abline(v = diffMeanGend)
+abline(v = -diffMeanGend)
+
+```
+
+<li>Calculate the significance </li>
+
+```{r}
+p <- (sum((v1-v2)>diffMeanGend)+sum((v1-v2)<(-diffMeanGend)))/n
+p
+```
+</ol>
+
+
+<br><br>
+<h5>Conclusion:</h5>
+<p>
+We accept the null-hypothesis, that the means are not statistically different </p>
+
+
+<br><br>
+
+<h3>Application of BootStrap Method</h3>
+<p>We want to calculate the estimate of the correlation coefficient of the variables FirstYearGPA and HighSchoolGPA.  </p>
+
+
+```{r}
+set.seed(1000)
+
+x <- cbind(fygpa, hsgpa)
+n <- length(fygpa)
+
+m <- 1000
+b <- numeric(m)
+for(i in 1:m) {
+ind <- sample(1:n, n, replace=T)
+theta <- x[ind,]
+b[i] <- cor(theta[,1], theta[,2])
+}
+# Percentile interval
+PI <- quantile(b, probs = c(0.025, 0.975))
+PI
+```
+
+```{r}
+plot(b)
+```
+
+
+```{r}
+library("boot")
+theta <- function(m,x) {
+cor(m[x,1], m[x,2])
+}
+l <- boot(cbind(fygpa, hsgpa), theta, R=1000)
+# Coefficient estimate
+l$t0
+```
+
+<p>The high school GPA and first year GPA seems to have a weak correlation </p>
+
+
+```{r}
+plot(fygpa, hsgpa, main="Relations between college GPA and HS GPA", xlab="First Year GPA", ylab="High School GPA ") 
+```
+
+
+```{r}
+boot.ci(l, type = "perc")
+```
+
